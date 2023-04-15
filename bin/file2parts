@@ -1,0 +1,106 @@
+#!/usr/bin/env bash
+# 
+# Split file into parts (ending in .part), stored in dir called FILENAME.SHA256HASH.parts
+# Before deleting the original, verify concatting parts reproduces it
+
+
+HELP="
+file2parts FILE_TO_SPLIT [opts]\n
+\t-m : also setup submodule repo
+\t-u : first half of git remote URL to use (ex. git@github.com:An-GG), default to same as parent
+\t-s : size for part files in MB, default to 1MB
+\t-c : when -m is used, will also try to create repo with gh (if installed) and push to remote
+\t-h : help
+\n
+Available env vars:
+
+\tLFB_OPT_SUBMODULE=1
+\tLFB_GIT_REMOTE='...'
+\tLFB_PARTSIZE_MB=10
+\tLFB_CREATE_WITH_GH=1
+\n
+"
+[ "$#" == "0" ] && printf "$HELP" && exit;
+
+# Check Options
+opt_submodule=$LFB_OPT_SUBMODULE
+opt_git_remote=$LFB_GIT_REMOTE
+opt_partsize_mb=$LFB_PARTSIZE_MB
+opt_create_with_gh=$LFB_CREATE_WITH_GH
+i=0; while [[ "$i" -ne "$#" ]]; do i=$((i+1)); arg="${!i}";
+    [ "$arg" == "-m" ] && opt_submodule=1 ;
+    [ "$arg" == "-u" ] && { i=$((i+1)); opt_git_remote="${!i}"; }
+    [ "$arg" == "-s" ] && { i=$((i+1)); opt_partsize_mb="${!i}"; }
+    [ "$arg" == "-c" ] && opt_create_with_gh=1 ; 
+    [ "$arg" == "-h" ] && printf "$HELP" && exit;
+done
+
+# Size of split file parts. Default is 1MB
+[ -z $opt_partsize_mb ] && opt_partsize_mb=1;
+partslen=$((opt_partsize_mb * 1000000)); 
+
+# Check file exists
+[ ! -f $1 ] && printf "\nError: $1 is not a valid filename\n\n" && exit 1;
+
+filepath=$(dirname $1)/$(basename $1)
+filehash="$(shasum -a 256 $filepath | awk '{print $1}')"
+
+printf "File:   $filepath\n"
+printf "SHA256: $filehash\n"
+printf "Part Size: $((partslen / 1000000)) MB\n"
+
+outdir="$filepath.$filehash.parts";
+[ -d $outdir ] && printf "\nError: output parts directory already exists:\n\t$outdir\n" && exit 1;
+mkdir $outdir; [ "$?" != "0" ] && exit 1;
+
+split -b $partslen $filepath "$outdir/"
+for file in $outdir/*; do
+    mv "$file" "${file}.part"
+done
+
+printf "Verifying...    "
+mv $filepath original.tmp
+cat $outdir/*.part > $filepath
+
+diff original.tmp $filepath
+[[ "$?" != "0" ]] && printf "Error: Reassembled file and original differ\n" && exit 1;
+rm "original.tmp" $filepath
+printf "Done.   \n\nRemoved:\n$filepath\nCreated:\n$outdir\n"
+
+if [ "$opt_submodule" == "1" ]; then
+    printf "Submodule option enabled, setting up...\n"
+    
+    # check for parent dir
+    cd $outdir; eval "git status"
+    [ $? -ne 0 ] && printf "Error: No parent repository for submodule\n" && exit 1; 
+
+    # check for remote name
+    echo "-------"
+    echo "$opt_git_remote"
+    [ -z $opt_git_remote ] && opt_git_remote=$(echo "$(git remote get-url origin)" | cut -d/ -f1)
+    repo_name=$(basename $(pwd)) && git_url="$opt_git_remote/$repo_name.git" && printf "Remote: $git_url\n";
+
+    git init && git add --all && git commit -m "LFB bucket init" && git remote add origin $git_url 
+    printf "LFB repo created locally. "
+
+    [ -z $opt_create_with_gh ] && printf "\n\tYou still need to create the remote and push manually.\n";
+    if [ "$opt_create_with_gh" == "1" ]; then 
+        printf "\n\tAttempting to create repo with gh.\n"; 
+        eval "gh repo view --json isPrivate | grep 'true';"; 
+        parent_is_private=$?; printf "parent_is_private=$parent_is_private - using same as parent\n"
+        
+        [ $parent_is_private -eq 1 ] && gh repo create $git_url --private
+        [ $parent_is_private -eq 0 ] && gh repo create $git_url --public
+        eval "gh repo view $git_url"; [ $? != 0 ] && printf "\tWarning: gh repo view failed, seems like repo wasn't created\n";
+        eval "git fetch"; [ $? != 0 ] && printf "\tWarning: git fetch failed\n";
+        eval "git push -u origin $(git branch --show-current)"; [ $? != 0 ] && printf "\tWarning: git push failed\n";
+    fi
+
+    cd ../
+    git submodule add $git_url
+
+    echo "Added submodule."
+fi
+
+
+

@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+# 
+# Input is dir called FILENAME.SHA256HASH.parts, verify it ends in parts, then
+# get hash from filename, get original filename. Reassemble file as FILENAME
+# from .part files. hash it and compare with filename hash. Delete dir from input
+# Before deleting the original, verify concatting parts reproduces it
+
+echo "Trying submodule update..."
+git submodule update --init --recursive $1
+
+outdir="$(dirname $1)/$(basename $1)"
+
+[[ $outdir != *.parts ]] && printf "Error: Input must be a dir ending in '.parts'\n" && exit 1;
+
+base_without_parts="$(basename $outdir .parts)"
+filename_hash=${base_without_parts: -64}
+base_without_hash="$(basename $outdir .$filename_hash.parts)"
+filepath="$(dirname $outdir)/$base_without_hash"
+
+printf "Assembling...     "
+cat $outdir/*.part > $filepath
+printf "Done.\n"
+
+filehash="$(shasum -a 256 $filepath | awk '{print $1}')"   
+
+printf "$filename_hash < hash from filename\n"
+printf "$filehash < hash of newly assembled file\n" 
+[[ $filename_hash != $filehash ]] && printf "Error: Hash of assembled file does not match hash in filename." && exit 1;
+
+printf "\nCreated:\n$filepath\n"
+
+
