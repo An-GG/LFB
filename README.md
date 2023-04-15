@@ -81,3 +81,6 @@ Available env vars:
 
 Running `./bin/file2parts bigfile.iso -c -m -u "git@github.com:angg-lf"` will do everything, including setting up and pushing to a remote repository with `gh`. 
 Also, here I use a different github organization path, where I store all my LFB .parts repositories.
+
+
+`./bin/parts2file` will attempt to initialize and clone submodules automatically, so running it on a LFB .parts directory should just work.
