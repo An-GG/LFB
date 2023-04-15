@@ -8,7 +8,7 @@ HELP="
 file2parts FILE_TO_SPLIT [opts]\n
 \t-m : also setup submodule repo
 \t-u : first half of git remote URL to use (ex. git@github.com:An-GG), default to same as parent
-\t-s : size for part files in MB, default to 1MB
+\t-s : size for part files in MB, default to 50MB
 \t-c : when -m is used, will also try to create repo with gh (if installed) and push to remote
 \t-h : help
 \n
@@ -35,23 +35,41 @@ i=0; while [[ "$i" -ne "$#" ]]; do i=$((i+1)); arg="${!i}";
     [ "$arg" == "-h" ] && printf "$HELP" && exit;
 done
 
-# Size of split file parts. Default is 1MB
-[ -z $opt_partsize_mb ] && opt_partsize_mb=1;
+# Size of split file parts. Default is 50MB
+[ -z $opt_partsize_mb ] && opt_partsize_mb=50;
 partslen=$((opt_partsize_mb * 1000000)); 
 
 # Check file exists
 [ ! -f $1 ] && printf "\nError: $1 is not a valid filename\n\n" && exit 1;
 
 filepath=$(dirname $1)/$(basename $1)
-filehash="$(shasum -a 256 $filepath | awk '{print $1}')"
+filesize_kb=$(du -k $filepath | awk '{print $1}')
+filesize_mb=$((filesize_kb / 1000))
 
 printf "File:   $filepath\n"
-printf "SHA256: $filehash\n"
+printf "Size:   $filesize_mb MB\n"
 printf "Part Size: $((partslen / 1000000)) MB\n"
+printf "SHA256: "
+
+filehash="$(shasum -a 256 $filepath | awk '{print $1}')"
+printf "$filehash\n"
 
 outdir="$filepath.$filehash.parts";
 [ -d $outdir ] && printf "\nError: output parts directory already exists:\n\t$outdir\n" && exit 1;
 mkdir $outdir; [ "$?" != "0" ] && exit 1;
+
+
+REPO_SIZE_MAX_MB=9000
+if [ "$filesize_mb" -gt "$REPO_SIZE_MAX_MB"  ]; then 
+    printf "File is larger than max repo size ($REPO_SIZE_MAX_MB MB), splitting into chunks, and making parts recursively."
+    reposize_bytes=$(($REPO_SIZE_MAX_MB * 1000000))
+    split -b $reposize_bytes $filepath "$outdir/chunk."
+    for file in $outdir/chunk.*; do
+        ./$0 $file "$@"
+    done
+    exit 0;
+fi
+
 
 split -b $partslen $filepath "$outdir/"
 for file in $outdir/*; do
