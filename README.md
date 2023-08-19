@@ -31,6 +31,8 @@ $
 $ ls ./bigfile.iso.324db7d51f851df4ee17c8e91683a0173a4f92cfb5bf6a744470fe0c10dd19dd.parts
 aa.part	al.part	aw.part	bh.part	bs.part	cd.part ...
 ```
+> there's filename length issues w/ this strat for naming the file
+
 
 and now you can commit and push this.
 
@@ -49,7 +51,9 @@ $
 
 The output directory (ending in .parts) has the hash of the big file in the dirname for double checking after reassembly. 
 
-## submodules & advanced usage
+## ~~submodules & advanced usage~~ 
+
+**this shit kinda cringe ngl i just use it to split and combine**  
 
 You probably don't want to commit even the split up file parts to your primary repo because this will make cloning and manipulating git history slow.
 
