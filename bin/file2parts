@@ -65,7 +65,7 @@ if [ "$filesize_mb" -gt "$REPO_SIZE_MAX_MB"  ]; then
     reposize_bytes=$(($REPO_SIZE_MAX_MB * 1000000))
     split -b $reposize_bytes $filepath "$outdir/chunk."
     for file in $outdir/chunk.*; do
-        ./$0 $file "$@"
+        $0 $file "$@"
     done
     exit 0;
 fi
