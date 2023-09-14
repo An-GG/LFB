@@ -58,8 +58,10 @@ outdir="$filepath.$filehash.parts";
 [ -d $outdir ] && printf "\nError: output parts directory already exists:\n\t$outdir\n" && exit 1;
 mkdir $outdir; [ "$?" != "0" ] && exit 1;
 
+REPO_SIZE_MAX_MB=1995
+# Decreased from 10 GB (repo max) to 2 GB (single git push max)
+# Multiple push connections seem to increase total bandwidth as well.
 
-REPO_SIZE_MAX_MB=9000
 if [ "$filesize_mb" -gt "$REPO_SIZE_MAX_MB"  ]; then 
     printf "File is larger than max repo size ($REPO_SIZE_MAX_MB MB), splitting into chunks, and making parts recursively."
     reposize_bytes=$(($REPO_SIZE_MAX_MB * 1000000))
