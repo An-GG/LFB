@@ -1,5 +1,11 @@
 # LFB: Large File Bucket
 
+> **TODO:** this can be like really fast and legit viable + better than LFS. Right now this is slow bc git push is limited to 10 Mb/s network bandwidth.
+> *life hack: turns out you can push to like 10 different repos in parallel and this gets you 10x the bandwidth (for github), easily max out your fiber connection.
+>
+> + disabling delta compression during git push makes this almost uncompromising (.git/ dir will use up 2x disk space so google drive remains relevant for now)
+
+
 This repo contains scripts that automate splitting up large files into parts, which can be committed and pushed to git hosts, and to reassemble file parts into the original.
 
 basically, solution for 
