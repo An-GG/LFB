@@ -6,6 +6,19 @@
 > + disabling delta compression during git push makes this almost uncompromising (.git/ dir will use up 2x disk space so google drive remains relevant for now)
 
 
+
+> i'm making this way too complicated, you can just use the --jobs for parallel clone works great (# can probably be even more than nproc since we're waiting on IO)
+
+<img width="774" alt="Screenshot 2023-10-12 at 9 46 46 AM" src="https://github.com/An-GG/LFB/assets/20458990/4dd7c647-99ea-4553-99a2-630f119f89b9">
+
+<br>sustained **1200mbps**  i could stare at this bandwidth meter all day 🤤
+
+(a bit of lie, real val is abt 700mbps)
+
+this is worth keeping as shell code
+
+---
+
 This repo contains scripts that automate splitting up large files into parts, which can be committed and pushed to git hosts, and to reassemble file parts into the original.
 
 basically, solution for 
